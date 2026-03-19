@@ -1,0 +1,4 @@
+name: test_triage
+description: Test profile for incident response triage collection.
+artifacts:
+  - live_response/network/*
