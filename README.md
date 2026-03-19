@@ -316,6 +316,62 @@ This matters especially if you edit YAML files from Windows, because `CRLF` line
 
 This repository includes [`.gitattributes`](./.gitattributes) to help keep `*.sh`, `*.yaml`, and `*.yml` files in `LF` format.
 
+## Custom Artifacts and Scripts/Binaries
+
+If you have a Linux enumeration script, you can integrate it into this framework as a custom UAC artifact.
+
+The simplest approach is to wrap it as a `collector: command` artifact and either:
+
+- call the script by absolute path, or
+- bundle it next to UAC and call it via `%uac_directory%/...`
+
+Example if the script already exists on the target:
+
+```yaml
+version: 2.0
+condition: '[ -x /opt/tools/enum.sh ]'
+output_directory: /priv_esc
+artifacts:
+  -
+    description: Run local privilege escalation enumeration script.
+    supported_os: [linux]
+    collector: command
+    command: /opt/tools/enum.sh
+    output_file: enum.txt
+    redirect_stderr_to_stdout: true
+```
+
+Example if you ship it with UAC:
+
+```yaml
+version: 2.0
+condition: '[ -x %uac_directory%/custom/enum.sh ]'
+output_directory: /priv_esc
+artifacts:
+  -
+    description: Run bundled privilege escalation enumeration script.
+    supported_os: [linux]
+    collector: command
+    command: '%uac_directory%/custom/enum.sh'
+    output_file: enum.txt
+    redirect_stderr_to_stdout: true
+```
+
+Important behavior:
+
+- If you add a `condition:` and the script is missing, UAC skips it gracefully.
+- If you do not add a condition and the script is missing or fails, that artifact fails, but UAC usually continues with the rest of the collection.
+
+However, many privilege-escalation enum scripts are noisy and can touch system state, so they may be a poor fit for strict forensic triage. They can trigger EDR or alter timestamps/logs but, if you include one, put it in a separate custom profile, not your normal forensic triage profile.
+
+Recommended pattern:
+
+- create a custom artifact YAML
+- create a dedicated custom profile that includes it
+- guard it with `condition:`
+- send stdout/stderr to an output file
+- keep the script in LF format and executable
+
 ## License / Attribution
 
 The wrapper in this repository is a new project logic around UAC. It is under the [Apache License Version 2.0](LICENSE) software license.
